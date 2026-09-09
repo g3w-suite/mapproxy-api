@@ -3,28 +3,26 @@ services:
     build: .
     ports:
       - "8000:8000"
+    env_file:
+      - path: .env
+        format: raw
     environment:
       MAPPROXY_CONF_DIR: /data/mapproxy/conf
       MAPPROXY_CACHE_DIR: /data/mapproxy/conf/cache_data
       MAPPROXY_PUBLIC_URL: http://localhost:8080
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?set with: python -m app.cli hash <pwd>}
     volumes:
-      - mapproxy-data:/data/mapproxy
+      - ${MAPPROXY_DATA_DIR}:/data/mapproxy
 
   mapproxy:
-    image: kartoza/mapproxy:latest
+    image: python:3.12-slim
     ports:
       - "8080:8080"
     volumes:
-      - mapproxy-data:/data/mapproxy
-      - ./mapproxy_multiapp/mapproxy.yaml:/mapproxy/mapproxy.yaml:ro
+      - ${MAPPROXY_DATA_DIR}:/data/mapproxy
+    working_dir: /data/mapproxy/conf
     command:
-      - mapproxy-util
-      - serve-multiapp
-      - --bind=0.0.0.0:8080
-      - /data/mapproxy/conf
-
-volumes:
-  mapproxy-data:
+      - sh
+      - -c
+      - >
+        pip install --no-cache-dir --quiet MapProxy PyYAML pyproj Pillow &&
+        mapproxy-util serve-multiapp-develop --bind=0.0.0.0:8080 /data/mapproxy/conf

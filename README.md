@@ -15,17 +15,47 @@ python -m app.cli hash mysecret
 # copy the output into .env as ADMIN_PASSWORD_HASH
 cp .env.example .env
 
-uvicorn app.main:app --reload
+WATCHFILES_FORCE_POLLING=true uvicorn app.main:app --reload --reload-dir app
 # open http://localhost:8000/docs
+```
+
+`WATCHFILES_FORCE_POLLING=true` avoids `Too many open files (os error 24)` when
+the inotify `max_user_instances` limit is exhausted by other tools (VS Code,
+etc.). On systems where inotify has room, you can drop it:
+
+```bash
+uvicorn app.main:app --reload --reload-dir app
 ```
 
 ## Quickstart (Docker)
 
 ```bash
-docker compose up --build
+docker compose --env-file /dev/null up --build
 # API:      http://localhost:8000/docs
 # MapProxy: http://localhost:8080/demo/
 ```
+
+`--env-file /dev/null` prevents Docker Compose from re-interpolating `$` inside
+the bcrypt hash contained in `.env`. The `.env` values are still delivered to
+the container via the `env_file: format: raw` directive in `docker-compose.yml`.
+
+## Production (Docker + Nginx reverse proxy)
+
+```bash
+docker compose -f docker-compose-prod.yml --env-file /dev/null up --build -d
+# API:      http://localhost/docs
+# MapProxy: http://localhost/mapproxy/<layer_name>/service?
+```
+
+Differences from the dev compose:
+
+- Nginx on port 80 is the only exposed service; `api` and `mapproxy` are
+  reachable only inside the docker network.
+- MapProxy runs under `gunicorn` (`mapproxy.multiapp:make_wsgi_app`), not the
+  built-in development server.
+- `MAPPROXY_PUBLIC_URL` is set to `http://localhost/mapproxy` so URLs returned
+  by the API point through the reverse proxy.
+- Nginx routes: `/mapproxy/...` → mapproxy sidecar, everything else → api.
 
 ## Typical flow
 
