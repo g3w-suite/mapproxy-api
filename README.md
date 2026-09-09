@@ -1,5 +1,7 @@
 # mapproxy-api
 
+[![CI](https://github.com/g3w-suite/maproxy-api/actions/workflows/ci.yml/badge.svg)](https://github.com/g3w-suite/maproxy-api/actions/workflows/ci.yml)
+
 REST API to generate and manage [MapProxy](https://mapproxy.org/) YAML
 configurations. Port of the `g3w-admin-mapproxy` plugin workflow, standalone
 and framework-agnostic (no Django/QGIS required).
