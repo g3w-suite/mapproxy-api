@@ -1,0 +1,8 @@
+services:
+  demo:
+
+globals:
+  cache:
+    base_dir: /data/mapproxy/conf/cache_data
+    lock_dir: /data/mapproxy/conf/locks
+    tile_lock_dir: /data/mapproxy/conf/tile_locks

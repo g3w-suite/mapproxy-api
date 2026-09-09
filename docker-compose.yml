@@ -1,0 +1,30 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      MAPPROXY_CONF_DIR: /data/mapproxy/conf
+      MAPPROXY_CACHE_DIR: /data/mapproxy/conf/cache_data
+      MAPPROXY_PUBLIC_URL: http://localhost:8080
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?set with: python -m app.cli hash <pwd>}
+    volumes:
+      - mapproxy-data:/data/mapproxy
+
+  mapproxy:
+    image: kartoza/mapproxy:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - mapproxy-data:/data/mapproxy
+      - ./mapproxy_multiapp/mapproxy.yaml:/mapproxy/mapproxy.yaml:ro
+    command:
+      - mapproxy-util
+      - serve-multiapp
+      - --bind=0.0.0.0:8080
+      - /data/mapproxy/conf
+
+volumes:
+  mapproxy-data:
