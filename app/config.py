@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=(".env", ".env.secrets"), extra="ignore")
 
     mapproxy_conf_dir: Path = Path("/data/mapproxy/conf")
     mapproxy_cache_dir: Path = Path("/data/mapproxy/conf/cache_data")

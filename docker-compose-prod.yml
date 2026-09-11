@@ -2,7 +2,7 @@ services:
   api:
     build: .
     env_file:
-      - path: .env
+      - path: .env.secrets
         format: raw
     environment:
       MAPPROXY_CONF_DIR: /data/mapproxy/conf
