@@ -1,0 +1,63 @@
+upstream api {
+    server api:8000;
+}
+
+upstream mapproxy {
+    server mapproxy:8080;
+}
+
+# Redirect all HTTP traffic to HTTPS (preserving ACME challenge)
+server {
+    listen 80;
+    server_name _;
+
+    # Let's Encrypt ACME challenge
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# HTTPS server
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name example.com; # <-- Replace with your domain
+    client_max_body_size 20m;
+
+    ssl_certificate     /etc/letsencrypt/live/example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+
+    # Recommended SSL parameters
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_tickets off;
+
+    # HSTS (optional, recommended for production)
+    # add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+
+    location /mapproxy/ {
+        proxy_pass         http://mapproxy/;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto https;
+        proxy_set_header   X-Forwarded-Port  443;
+        proxy_set_header   X-Script-Name     /mapproxy;
+    }
+
+    location / {
+        proxy_pass         http://api;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto https;
+        proxy_set_header   X-Forwarded-Port  443;
+    }
+}

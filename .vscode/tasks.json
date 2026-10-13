@@ -44,6 +44,16 @@
             }
         },
         {
+            "label": "docker: nginx reload (prod)",
+            "type": "shell",
+            "command": "docker compose -f docker-compose-prod.yml exec nginx nginx -s reload",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
             "label": "docker: compose logs -f (dev)",
             "type": "shell",
             "command": "docker compose logs -f",

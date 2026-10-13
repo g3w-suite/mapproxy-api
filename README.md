@@ -9,15 +9,15 @@ and framework-agnostic (no Django/QGIS required).
 ## Quickstart (local)
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+python3 -m venv .venv && source .venv/bin/activate
+pip3 install -e ".[dev]"
 
 cp .env.example .env
 cp .env.secrets.example .env.secrets
 
 # generate a password hash for the admin user and paste it into .env.secrets
 # as ADMIN_PASSWORD_HASH
-python -m app.cli hash mysecret
+python3 -m app.cli hash mysecret
 
 WATCHFILES_FORCE_POLLING=true uvicorn app.main:app --reload --reload-dir app
 # open http://localhost:8000/docs
@@ -65,6 +65,51 @@ Differences from the dev compose:
 - `MAPPROXY_PUBLIC_URL` is set to `http://localhost/mapproxy` so URLs returned
   by the API point through the reverse proxy.
 - Nginx routes: `/mapproxy/...` → mapproxy sidecar, everything else → api.
+
+### HTTPS / SSL with Let's Encrypt
+
+`docker-compose-prod.yml` and `docker/nginx.conf` are pre-configured to work with Let's Encrypt via a `certbot` sidecar container.
+
+#### 1. Start the stack in HTTP mode
+Start the containers so Nginx is listening on port 80 and can serve the ACME challenge:
+
+```bash
+docker compose -f docker-compose-prod.yml up -d
+```
+
+#### 2. Obtain certificates via Certbot
+Run the Certbot container to complete the HTTP-01 challenge (replace with your domain and email):
+
+```bash
+docker compose -f docker-compose-prod.yml run --rm certbot certonly \
+    --webroot --webroot-path /var/www/certbot \
+    -d example.com \
+    --email admin@example.com \
+    --agree-tos --no-eff-email
+```
+
+#### 3. Enable HTTPS in Nginx
+Once certificates are generated, enable HTTPS in [docker/nginx.conf](docker/nginx.conf):
+- Replace `example.com` with your actual domain in the SSL block.
+- Uncomment the `server { listen 443 ssl; ... }` block and the HTTP-to-HTTPS redirect (`return 301 https://$host$request_uri;`) in [docker/nginx.conf](docker/nginx.conf) (or adapt from [docker/nginx-ssl.conf.example](docker/nginx-ssl.conf.example)).
+- Update `.env`:
+  ```bash
+  MAPPROXY_PUBLIC_URL=https://example.com/mapproxy
+  ```
+
+#### 4. Reload Nginx
+Reload Nginx without downtime:
+
+```bash
+docker compose -f docker-compose-prod.yml exec nginx nginx -s reload
+```
+
+#### Automatic renewals
+The `certbot` container continuously runs in the background and attempts renewal every 12 hours. Set up a daily cron job to reload Nginx so renewed certificates are reloaded into memory:
+
+```bash
+0 3 * * * cd /path/to/mapproxy_api && docker compose -f docker-compose-prod.yml exec -T nginx nginx -s reload
+```
 
 ## Typical flow
 
