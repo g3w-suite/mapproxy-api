@@ -25,7 +25,9 @@ services:
       - >
         pip install --no-cache-dir --quiet MapProxy gunicorn PyYAML pyproj Pillow &&
         printf '%s\n' 'from mapproxy.multiapp import make_wsgi_app' 'application = make_wsgi_app("/data/mapproxy/conf")' > /tmp/wsgi.py &&
-        gunicorn --chdir /tmp wsgi:application -w 2 -b 0.0.0.0:8080 --access-logfile -
+        gunicorn --chdir /tmp wsgi:application -w $${MAPPROXY_WORKERS:-2} -b 0.0.0.0:8080 --access-logfile -
+    environment:
+      MAPPROXY_WORKERS: ${MAPPROXY_WORKERS:-2}
     expose:
       - "8080"
     restart: unless-stopped
